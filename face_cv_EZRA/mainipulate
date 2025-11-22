@@ -1,0 +1,8 @@
+import cv2
+import cvclass
+img=cvclass.cvcol("CROWDIDSNEY.jpg")
+#img.shower(name='test')
+img.dialate()
+#img.shower()
+img.bigger(2)
+img.shower()

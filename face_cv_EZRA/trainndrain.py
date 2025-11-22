@@ -1,0 +1,61 @@
+import cv2, numpy
+import cvclass
+factor=1.001
+face_classifier = cv2.CascadeClassifier(
+    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+)
+
+
+def getimgs():
+	image=cv2.imread('WANTEDMAN.png',0)
+	faces=[]
+	print('calibrating to image...')
+	for i in range(1000):
+		for x,y,w,h in face_classifier.detectMultiScale(image,scaleFactor=1.1,minNeighbors=5,minSize=(30,30)):
+			face=image[y:y+h,x:x+h]
+			cv2.resize(face,(900,900))
+			#cv2.dilate(face,(5,5),iterations=1)
+			#cv2.erode(face,(5,5),iterations=1)
+			cv2.equalizeHist(face)
+			#cv2.GaussianBlur(face,(3,3),0)
+			if i==34:
+				cv2.imshow('ts',face)
+				cv2.waitKey(10000)
+			faces.append(face)
+	np_img=numpy.array(faces,'uint8')
+	np_id=numpy.asarray(range(1000))
+	return np_img,np_id
+x,y=getimgs()
+recognizer = cv2.face.LBPHFaceRecognizer_create()
+recognizer.train(x,y)
+#save recognizer.save('find_wantedman.yml')
+test=cvclass.cvcol('CROWDIDSNEY.jpg',gray=True)
+init_ts=cvclass.cvcol('CROWDIDSNEY.jpg')
+init_ts.bigger(3)
+#test.bluredlines()
+print('proccessing image for clairty')
+for x in range(5):
+	test.dialate()
+	test.erode()
+	#test.bigger(1.1)
+test.bigger(3)
+label_id, confidence = recognizer.predict(test.ret())
+print(confidence)
+faces=face_classifier.detectMultiScale(test.ret(),scaleFactor=1.1,minNeighbors=5,minSize=(30,30))
+end_frame= cv2.cvtColor(test.ret(), cv2.COLOR_BGR2RGB)
+#cv2.imshow('test',init_ts)
+#cv2.waitKey(10000)
+i=0
+print('found all faces')
+for (x,y,w,h) in faces:
+	aOIest=test.ret()[y:y+h,x:x+w]
+	id,cofind=recognizer.predict(aOIest)
+	print(f"Confidence Score: {cofind}")
+	if cofind<100:
+		print('face found')
+		cv2.rectangle(init_ts.ret(), (x,y),(x+w,y+h),(0,255,0),2)
+		cv2.imshow('finally',init_ts.ret())
+		x=cv2.waitKey(20000)
+		break
+	else:
+		print("Wrong Face Detected")

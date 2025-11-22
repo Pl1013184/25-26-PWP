@@ -1,0 +1,43 @@
+import cvclass
+import cv2
+import numpy as np
+image=cv2.imread('WANTEDMAN.png')
+com=cv2.imread('WANTEDMAN.png')
+gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+face_classifier = cv2.CascadeClassifier(
+    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+)
+face = face_classifier.detectMultiScale(
+    gray_image, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40)
+)
+
+for (x, y, w, h) in face:
+    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 1)
+
+def getimgs():
+	image=cv2.imread('WANTEDMAN.png',0)
+	faces=[]
+	for i in range(5):
+		face = image
+		cv2.imshow('ts',face)
+		cv2.waitKey(10000)
+		faces.append(face)
+	np_img=np.array(faces,'uint8')
+	np_id=np.asarray(range(5))
+	return np_img,np_id
+x,y=getimgs()
+
+recognizer = cv2.face.LBPHFaceRecognizer_create()
+recognizer.train(x,y)
+#save recognizer.save('find_wantedman.yml')
+test=cv2.imread('CROWDIDSNEY.jpg',0)
+
+label_id, confidence = recognizer.predict(test)
+
+print(f"Predicted ID: {label_id}")
+print(f"Confidence Score: {confidence}")
+
+cv2.imshow('testy',image)
+cv2.imshow('comp',com)
+cv2.waitKey(5*1000)
+cv2.destroyAllwindows()
