@@ -1,11 +1,9 @@
-from Flask import Flask, Response
-import cv2
-
 app = Flask(__name__)
-video = cv2.VideoCapture(0)
+#video = cv2.VideoCapture(0)
 
 def gen_vid():
-    while True:
+   video = cv2.VideoCapture(-1) 
+   while True:
         tester, frame = video.read()
         if not tester:
             continue
@@ -18,7 +16,7 @@ def gen_vid():
 
 @app.route('/video')
 def video():
-    return Response(gen_vid(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(gen_vid(), mimetype='multipart/x-mixed-replace; boundary=fr>
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, threaded=True)
