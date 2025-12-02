@@ -1,0 +1,3 @@
+##########HELPFORDEBUGING############
+# if it says face not attribute of opencv, run
+#     pip3 install opencv-contrib-python 
