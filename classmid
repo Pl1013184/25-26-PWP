@@ -75,9 +75,9 @@ while True:
     avg_y_f=0
     for lines in ptlines:
             avg_x_i+= (lines[0]//(len(ptlines))
-            avg_x_f+= (lines[0][2]+lines[1][2])//(len(parallel_)*2) 
-            avg_y_i+= (lines[0][1]+lines[1][1])//(len(parallel_)*2)
-            avg_y_f+= (lines[0][3]+lines[1][3])//(len(parallel_)*2)
+            avg_x_f+= (lines[2]//(len(ptlines)) 
+            avg_y_i+= (lines[1)//(len(ptlines)
+            avg_y_f+= (lines[3])//(len(ptlines))
     cv.line(imag,(avg_x_i,avg_y_i),(avg_x_f,avg_y_f),(0,0,255),7)
     fin_frm=cv.addWeighted(frame,0.6,imag,0.4,0)
     cv.imshow('webbcam',fin_frm)
