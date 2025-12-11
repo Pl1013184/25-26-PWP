@@ -18,7 +18,7 @@ def avg_liens(lines):
     return[xi_avg,yi_avg,xf_avg,yf_avg]
 def slp(line):
 	if line[2]-line[0]==0:
-		return None
+		return 0
     return (line[3]-line[1])/(line[2]-line[0])
 while True:
     tester,frame=video.read()
