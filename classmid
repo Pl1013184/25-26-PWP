@@ -10,7 +10,7 @@ def avg_liens(lines):
     yi_avg=0
     xf_avg=0
     yf_avg=0
-	for line in lines,
+	for line in lines:
 		xi_avg+=line[0]/len(lines)
         yi_avg+=line[1]/len(lines)
         xf_avg+=line[2]/len(lines)
