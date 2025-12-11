@@ -5,8 +5,19 @@ video = cv.VideoCapture(0)
 import math
 if not video.isOpened():
     print('Error')
+def avg_liens(lines):
+	for line in lines,
+		xi_avg+=line[0]/len(lines)
+        yi_avg+=line[1]/len(lines)
+        xf_avg+=line[2]/len(lines)
+        yf_avg+=line[3]/len(lines)
+def slp(line):
+	if line[2]-line[0]==0:
+		return None
+    return (line[3]-line[1])/(line[2]-line[0])
 while True:
     tester,frame=video.read()
+    midline = frame.shape[1]
     frame_proc=cvclass.cvcol(frame,pathing=True,gray=True)
 #    frame_proc.dialate(10)
     frame_proc.erode(10)
@@ -51,17 +62,16 @@ while True:
 
         x_i,y_i,x_f,y_f=line[0]
         ptlines.append([x_i,y_i,x_f,y_f])
- #       if i<1:
-           # cv.line(imag,(x_i,y_i),(x_f,y_f),(255,0,0),8)
-#        elif i<2:
-            # cv.line(imag,(x_i,y_i),(x_f,y_f),(0,0,255),8)
         i+=1  
     if len(ptlines)<2:
         continue
     parallel_=[]
     break9=False
+    ''' 
     for line0 in ptlines:
         for line1 in ptlines:
+            if line0==line1:
+                continue
             if math.fabs(math.atan(((line0[2]-line0[0])/(line0[3]-line0[1])))-math.atan(((line1[2]-line1[0])/(line1[3]-line1[1]))))<=0.5:
                 cv.line(imag,(line0[0],line0[1]),(line0[2],line0[3]),(255,0,0),8)
                 cv.line(imag,(line1[0],line1[1]),(line1[2],line1[3]),(0,255,0),8)
@@ -69,16 +79,36 @@ while True:
                 break
         if break9:
             break
-    avg_x_i=0
-    avg_x_f=0
-    avg_y_i=0
-    avg_y_f=0
+    '''
+    left_lnes=[]
+    right_lnes=[]
+    for line in ptlines:
+	    if slp(line)<0:
+            right_lnes.append(line)
+        else:
+            left_lnes.append(line)
+
+    avg_x_i_l=avg_liens(left_lnes)[0]
+    avg_x_f_l=avg_liens(left_lnes)[2]
+    avg_y_i_l=avg_liens(left_lnes)[1]
+    avg_y_f_l=avg_liens(left_lnes)[3]
+    avg_x_i_r=avg_liens(right_lnes)[0]
+    avg_x_f_r=avg_liens(right_lnes)[2]
+    avg_y_i_r=avg_liens(right_lnes)[1]
+    avg_y_f_r=avg_liens(right_lnes)[3]
+    '''
     for lines in ptlines:
             avg_x_i+= (lines[0]/(len(ptlines))
             avg_x_f+= (lines[2]/(len(ptlines)) 
             avg_y_i+= (lines[1)/(len(ptlines)
             avg_y_f+= (lines[3])/(len(ptlines))
+            avg_slope+= lines[3]-lines[1]/lines[2]-lines[0]
+    
     cv.line(imag,(avg_x_i,avg_y_i),(avg_x_f,avg_y_f),(0,0,255),7)
+    '''
+    cv.line(imag,(avg_x_i_l,avg_y_i_l),(avg_x_f_l,avg_y_f_l),(0,0,255),7)
+    cv.line(imag,(avg_x_i_r,avg_y_i_r),(avg_x_f_r,avg_y_f_r),(255,0,0),7)
+    cv.line(imag,((avg_x_i_l+avg_x_i_r)//2,(avg_y_i_l+avg_y_i_r)//2), ((avg_x_f_l+avg_x_f_r)//2,(avg_y_f_l+avg_y_f_r)//2),(0,255,0),7)
     fin_frm=cv.addWeighted(frame,0.6,imag,0.4,0)
     cv.imshow('webbcam',fin_frm)
     cv.waitKey(1)
