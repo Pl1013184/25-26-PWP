@@ -11,14 +11,14 @@ def avg_liens(lines):
     xf_avg=0
     yf_avg=0
 	for line in lines:
-		xi_avg+=line[0]/len(lines)
+        xi_avg+=line[0]/len(lines)
         yi_avg+=line[1]/len(lines)
         xf_avg+=line[2]/len(lines)
         yf_avg+=line[3]/len(lines)
     return[xi_avg,yi_avg,xf_avg,yf_avg]
 def slp(line):
-	if line[2]-line[0]==0:
-		return 0
+    if line[2]-line[0]==0:
+	    return 0
     return (line[3]-line[1])/(line[2]-line[0])
 while True:
     tester,frame=video.read()
