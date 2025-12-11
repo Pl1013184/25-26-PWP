@@ -62,7 +62,7 @@ while True:
     break9=False
     for line0 in ptlines:
         for line1 in ptlines:
-            if math.fabs(math.atan(((line0[2]-line0[0])//(line0[3]-line0[1])))-math.atan(((line1[2]-line1[0])//(line1[3]-line1[1]))))<=0.5:
+            if math.fabs(math.atan(((line0[2]-line0[0])/(line0[3]-line0[1])))-math.atan(((line1[2]-line1[0])/(line1[3]-line1[1]))))<=0.5:
                 cv.line(imag,(line0[0],line0[1]),(line0[2],line0[3]),(255,0,0),8)
                 cv.line(imag,(line1[0],line1[1]),(line1[2],line1[3]),(0,255,0),8)
                 parallel_.append([line0,line1]) 
@@ -74,10 +74,10 @@ while True:
     avg_y_i=0
     avg_y_f=0
     for lines in ptlines:
-            avg_x_i+= (lines[0]//(len(ptlines))
-            avg_x_f+= (lines[2]//(len(ptlines)) 
-            avg_y_i+= (lines[1)//(len(ptlines)
-            avg_y_f+= (lines[3])//(len(ptlines))
+            avg_x_i+= (lines[0]/(len(ptlines))
+            avg_x_f+= (lines[2]/(len(ptlines)) 
+            avg_y_i+= (lines[1)/(len(ptlines)
+            avg_y_f+= (lines[3])/(len(ptlines))
     cv.line(imag,(avg_x_i,avg_y_i),(avg_x_f,avg_y_f),(0,0,255),7)
     fin_frm=cv.addWeighted(frame,0.6,imag,0.4,0)
     cv.imshow('webbcam',fin_frm)
