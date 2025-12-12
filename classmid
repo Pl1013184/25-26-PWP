@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask,Response
 import cvclass
 import cv2 as cv
 import numpy as np
@@ -12,23 +12,23 @@ def avg_liens(lines):
     yi_avg=0
     xf_avg=0
     yf_avg=0
-	for line in lines:
+    for line in lines:
         xi_avg+=line[0]/len(lines)
         yi_avg+=line[1]/len(lines)
         xf_avg+=line[2]/len(lines)
         yf_avg+=line[3]/len(lines)
-    return[xi_avg,yi_avg,xf_avg,yf_avg]
+    return[int(xi_avg),int(yi_avg),int(xf_avg),int(yf_avg)]
 def slp(line):
     if line[2]-line[0]==0:
-	    return 0
+	    return None
     return (line[3]-line[1])/(line[2]-line[0])
-def gen_frames_proc()
+def gen_frames_proc():
 	while True:
 	    tester,frame=video.read()
 	    midline = frame.shape[1]
 	    frame_proc=cvclass.cvcol(frame,pathing=True,gray=True)
 	#    frame_proc.dialate(10)
-	    frame_proc.erode(10)
+	    frame_proc.erode()
 	#    frame_proc.dialate(27)
 	    frame_proc.bluredlines()
 	#   test code for skeletonization alg from https://opencvpython.blogspot.com/2012/05/skeletonization-using-opencv-python.html
@@ -61,7 +61,7 @@ def gen_frames_proc()
 	    imag=frame_proc.img
 	   # imag= cv2.bitwise_and(imag, col_msk)
 	    #cv.imshow('webcam',imag)
-	#    cv.waitKey(1)
+	    #cv.waitKey(1)
 	    if lines is None:   
 	        continue
 	    i=0
@@ -91,11 +91,15 @@ def gen_frames_proc()
 	    left_lnes=[]
 	    right_lnes=[]
 	    for line in ptlines:
-		    if slp(line)<0:
+	        if slp(line) is None:
+	            if line[0]<frame.shape[0]/2:
+	                left_lnes.append(line)
+	            else:
+	                right_lnes.append(line)
+	        elif slp(line)<0:
 	            right_lnes.append(line)
 	        else:
 	            left_lnes.append(line)
-	
 	    avg_x_i_l=avg_liens(left_lnes)[0]
 	    avg_x_f_l=avg_liens(left_lnes)[2]
 	    avg_y_i_l=avg_liens(left_lnes)[1]
@@ -106,20 +110,24 @@ def gen_frames_proc()
 	    avg_y_f_r=avg_liens(right_lnes)[3]
 	    '''
 	    for lines in ptlines:
-	            avg_x_i+= (lines[0]/(len(ptlines))
-	            avg_x_f+= (lines[2]/(len(ptlines)) 
-	            avg_y_i+= (lines[1)/(len(ptlines)
-	            avg_y_f+= (lines[3])/(len(ptlines))
-	            avg_slope+= lines[3]-lines[1]/lines[2]-lines[0]
+	            avg_x_i+= int(lines[0]/(len(ptlines))
+	            avg_x_f+=int(lines[2]/(len(ptlines)) 
+	            avg_y_i+= int(lines[1/(len(ptlines)
+	            avg_y_f+= int(lines[3]/(len(ptlines))
+	            avg_slope+= int(lines[3]-lines[1]/lines[2]-lines[0])
 	    
 	    cv.line(imag,(avg_x_i,avg_y_i),(avg_x_f,avg_y_f),(0,0,255),7)
 	    '''
 	    cv.line(imag,(avg_x_i_l,avg_y_i_l),(avg_x_f_l,avg_y_f_l),(0,0,255),7)
+	    #if avg_x_i_l<frame.shape[1]/2<avg_x_f_l:
+            #        cv.line(imag,((avg_x_i_l+avg_x_i_r)//2,(avg_y_i_l+avg_y_i_r)//2), ((avg_x_f_l+avg_x_f_r)//2,(avg_y_f_l+avg_y_f_r)//2),(0,255,0),7)
+	    #else:
+            #        cv.line(imag,((avg_x_i_l+avg_x_i_r)//2,(avg_y_i_l+avg_y_i_r)//2), (frame.shape[1]/2,0),(0,255,0),7)
 	    cv.line(imag,(avg_x_i_r,avg_y_i_r),(avg_x_f_r,avg_y_f_r),(255,0,0),7)
 	    cv.line(imag,((avg_x_i_l+avg_x_i_r)//2,(avg_y_i_l+avg_y_i_r)//2), ((avg_x_f_l+avg_x_f_r)//2,(avg_y_f_l+avg_y_f_r)//2),(0,255,0),7)
 	    fin_frm=cv.addWeighted(frame,0.6,imag,0.4,0)
 	    #cv.imshow('webbcam',fin_frm)
-	    x, img_data = cv2.imencode('.jpg', raw)
+	    x, img_data = cv.imencode('.jpg', fin_frm)
 	    raw_bytes = img_data.tobytes()
 	    yield (b'--frame\r\n'
 	      b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes + b'\r\n')
@@ -128,4 +136,5 @@ def gen_frames_proc()
 @app.route('/proc_vid')
 def proc_vid():
    return Response(gen_frames_proc(), mimetype='multipart/x-mixed-replace; boundary=frame')
+app.run(host='0.0.0.0', port=5000, threaded=True)
 
