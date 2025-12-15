@@ -53,14 +53,20 @@
 </body>
 
 <script>
-    const API_URL = 'http://127.0.0.1:5000/controls';
-
+    const API_URL = 'http://127.0.0.1:5000';
+    async function addlog(data){const response = await fetch(API_URL+'/log', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 'logdata': data }),
+            });    }
     async function sendCommand(direction) {
         const log = document.getElementById('log');
         console.log(`Attempting to send command: ${direction}`);
         log.innerHTML+=`<br>Attempting to send command: ${direction}`
         try {
-            const response = await fetch(API_URL, {
+            const response = await fetch(API_URL+'/controls', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
