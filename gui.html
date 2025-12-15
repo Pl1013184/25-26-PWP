@@ -47,7 +47,7 @@
             <td style="border: 1px solid black;">
                 <iframe src='192.168.240.123:5000/video' id="myVideo1" width=640  height= 480">
             </td>
-            <td style="border: 1px solid black;"><div id='log'></div></td>
+            <td style="border: 1px solid black;"><div id='log'>log</div></td>
         </tr>
     </table>
 </body>
@@ -58,7 +58,7 @@
     async function sendCommand(direction) {
         const log = document.getElementById('log');
         console.log(`Attempting to send command: ${direction}`);
-        log.innerHTML+=`Attempting to send command: ${direction}`
+        log.innerHTML+=`<br>Attempting to send command: ${direction}`
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
@@ -71,7 +71,7 @@
             if (response.ok) {
                 const result = await response.json();
                 console.log('Command successful. Direction:', result.direction);
-                log.innerHTML+=`Command successful. Direction:${result.direction}`
+                log.innerHTML+=`<br>Command successful. Direction:${result.direction}`
             } else {
                 const errorText = await response.text();
                 console.error('Command failed. Status:', response.status, 'Error:', errorText);
