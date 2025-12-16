@@ -19,8 +19,8 @@ def avg_liens(lines):
         yf_avg+=line[3]/len(lines)
     return[int(xi_avg),int(yi_avg),int(xf_avg),int(yf_avg)]
 def slp(line):
-    if line[2]-line[0]==0:
-        return 0,0
+    if math.fabs(line[2]-line[0])-0.001<0:
+        return 1000000,0
     return (line[3]-line[1])/(line[2]-line[0]),line[3]-(line[2]*(line[3]-line[1])/(line[2]-line[0]))
 
 def avg_liens_ymxb(lines):
@@ -46,6 +46,8 @@ def raw_vid():
 def gen_frames_proc():
     while True:
         tester,frame=video.read()
+        if not tester:
+            continue
         midline = frame.shape[1]
         frame_proc=cvclass.cvcol(frame,pathing=True,gray=True)
     #    frame_proc.dialate(10)
@@ -77,7 +79,7 @@ def gen_frames_proc():
         mask = np.zeros((frame_proc.img.shape[0],frame_proc.img.shape[1]),dtype=np.uint8)
         cv.fillPoly(mask, polygon_points, 255)
         frame_proc.img = cv.bitwise_and(frame_proc.img,frame_proc.img,mask=mask)
-        lines = cv.HoughLinesP(frame_proc.ret(),rho=1,theta=np.pi/180,threshold=100 ,minLineLength=250,maxLineGap=60)
+        lines = cv.HoughLinesP(frame_proc.ret(),rho=1,theta=np.pi/180,threshold=100 ,minLineLength=200,maxLineGap=60)
         frame_proc.img= cv.cvtColor(frame_proc.img, cv.COLOR_GRAY2BGR)
         imag=frame_proc.img
        # imag= cv2.bitwise_and(imag, col_msk)
@@ -157,7 +159,10 @@ def gen_frames_proc():
                 cv.line(imag,((avg_x_i_l+avg_x_i_r)//2,(avg_y_i_l+avg_y_i_r)//2), ((avg_x_f_l+avg_x_f_r)//2,(avg_y_f_l+avg_y_f_r)//2),(0,255,0),7)
             except:
                 cv.line(imag, ((avg_x_i_l+avg_x_i_r)//2, y_i), ((avg_x_f_l+avg_x_f_r)//2, y_f), (0,255,0), 7)
-                
+        else:
+           #print('here')
+           cv.line(imag,((avg_x_i_l+avg_x_i_r)//2,int(frame.shape[0]*0.8)), ((avg_x_f_l+avg_x_f_r)//2,(avg_y_f_l+avg_y_f_r)//2),(0,255,0),7)
+           #break
         cv.line(imag,(avg_x_i_l,avg_y_i_l),(avg_x_f_l,avg_y_f_l),(0,0,255),7)
         cv.line(imag,(avg_x_i_r,avg_y_i_r),(avg_x_f_r,avg_y_f_r),(255,0,0),7)
         #cv.line(imag,(avg_x_i_l+avg_x_i_r)//2,(avg_y_i_l+avg_y_i_r)//2), ((avg_x_f_l+avg_x_f_r)//2,(avg_y_f_l+avg_y_f_r)//2),(0,255,0),7)
