@@ -65,6 +65,7 @@
         const log = document.getElementById('log');
         console.log(`Attempting to send command: ${direction}`);
         log.innerHTML+=`<br>Attempting to send command: ${direction}`
+        addlog(`<br>Attempting to send command: ${direction}`)
         try {
             const response = await fetch(API_URL+'/controls', {
                 method: 'POST',
@@ -78,6 +79,7 @@
                 const result = await response.json();
                 console.log('Command successful. Direction:', result.direction);
                 log.innerHTML+=`<br>Command successful. Direction:${result.direction}`
+                addlog(`<br>Command successful. Direction:${result.direction}`)
             } else {
                 const errorText = await response.text();
                 console.error('Command failed. Status:', response.status, 'Error:', errorText);
