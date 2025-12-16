@@ -75,13 +75,15 @@ def gen_frames_proc():
         frame_proc.img=cv.Canny(frame_proc.img, 50,100)
        # cv.imshow('lines',frame_proc.img)
         #frame_proc.img *= np.array((0,0,255),np.uint8)
-        polygon_points = np.array([[[200, 0], [1000, 0], [1200, 800], [100, 800]]], dtype=np.int32)
+        polygon_points = np.array([[[int(frame.shape[1]*0.2), 0], [int(frame.shape[1]*0.8), 0], [int(frame.shape[1]*0.9), frame.shape[0]], [int(frame.shape[1]*0.1), frame.shape[0]]]], dtype=np.int32)
         mask = np.zeros((frame_proc.img.shape[0],frame_proc.img.shape[1]),dtype=np.uint8)
         cv.fillPoly(mask, polygon_points, 255)
         frame_proc.img = cv.bitwise_and(frame_proc.img,frame_proc.img,mask=mask)
         lines = cv.HoughLinesP(frame_proc.ret(),rho=1,theta=np.pi/180,threshold=100 ,minLineLength=200,maxLineGap=60)
         frame_proc.img= cv.cvtColor(frame_proc.img, cv.COLOR_GRAY2BGR)
         imag=frame_proc.img
+        cv.polylines(imag, polygon_points, isClosed=True, color=(0,255,255), thickness=2)
+
        # imag= cv2.bitwise_and(imag, col_msk)
         #cv.imshow('webcam',imag)
         #cv.waitKey(1)
@@ -182,4 +184,8 @@ def proc_vid():
 @app.route('/vid')
 def vid():
    return Response(raw_vid(), mimetype='multipart/x-mixed-replace; boundary=frame')
+@app.route('/log')
+   log=open('log.txt','a')
+   log.append(request.forms.get('logdata'))
+   log.close()
 app.run(host='0.0.0.0', port=5000, threaded=True)
