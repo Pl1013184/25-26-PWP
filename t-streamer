@@ -1,0 +1,71 @@
+from flask import Flask, Response
+import cv2
+import cv2 as cv
+import numpy as np
+from threading import Thread
+app = Flask(__name__)
+#video = cv2.VideoCapture(0)
+global video
+global bholdr
+videio = cv2.VideoCapture(-1)
+while videio.read()[0]==False:
+   pass
+bholdr= np.array([videio.read()[1],videio.read()[1],videio.read()[1]])
+def get_frm():
+   rd,frame=videio.read()
+   if rd is False:
+       return None
+   np.delete(bholdr,-1)
+   np.append(bholdr,frame)
+def gen_vid():
+   raw=bholdr[1]
+   x, img_data = cv2.imencode('.jpg', raw)
+   raw_bytes = img_data.tobytes()
+   yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes + b'\r\n')
+def gen_proc_vid():
+   while True:
+      frame=bholdr[1]
+      raw = cv2.Canny(raw,100,200)
+      lines = cv.HoughLinesP(raw,rho=1,theta=np.pi/180,threshold=100 ,minLineLength=100,maxLineGap=12)
+      raw= cv.cvtColor(raw, cv.COLOR_GRAY2BGR)
+      imag = raw
+      if lines is None:
+          x, img_data = cv2.imencode('.jpg', raw)
+          raw_bytes = img_data.tobytes()
+          yield (b'--frame\r\n'
+          b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes + b'\r\n')
+          continue
+      i=0
+      ptlines=[]
+      for line in lines:
+
+          x_i,y_i,x_f,y_f=line[0]
+          ptlines.append([x_i,y_i,x_f,y_f])
+      
+      for lines in ptlines:
+		for clines in ptlines
+      			if (lines[3]-lines[1])/(lines[0]-lines[2])-(clines[3]-clines[1])/(clines[0]-clines[2])<=0.4:
+				cv.line(imag,(lines[0],lines[2]),(lines[1],lines[3]),(0,0,255),4)
+				cv.line(imag,(clines[0],clines[2]),(clines[1],clines[3]),(0,0,255),4)
+      if len(ptlines)>=2:
+          cv.line(imag,((ptlines[0][0]+ptlines[1][0])//2,(ptlines[0][1]+ptlines[1][1])//2),((ptlines[0][2]+ptlines[1][2])//2,(ptlines[0][3]+ptlines[1][3])//2),(0,255,0),7)
+          width
+      raw=cv.addWeighted(frame,0.7,imag,0.3,0)
+      x, img_data = cv2.imencode('.jpg', raw)
+      raw_bytes = img_data.tobytes()
+      yield (b'--frame\r\n'
+      b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes + b'\r\n')
+
+@app.route('/video')
+def video():
+    vid= Thread(target=getfrm,args=())
+    shw= Thread(target = gen_vid, args=())
+    vid.start()
+    shw.start()
+    return Response(gen_vid(), mimetype='multipart/x-mixed-replace; boundary=frame')
+@app.route('/proc_vid')
+def proc_vid():
+   return Response(gen_proc_vid(), mimetype='multipart/x-mixed-replace; boundary=frame')
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, threaded=True)
