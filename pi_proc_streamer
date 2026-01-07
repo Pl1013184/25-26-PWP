@@ -2,6 +2,7 @@ from flask import Flask, Response
 import cv2
 import cv2 as cv
 import numpy as np
+from threading import Thread
 app = Flask(__name__)
 #video = cv2.VideoCapture(0)
 global video
