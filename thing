@@ -1,0 +1,123 @@
+from flask import Flask, Response
+import cv2
+import cv2 as cv
+import numpy as np
+import threading
+import time
+from threading import Thread
+app = Flask(__name__)
+global videio
+global bholdr
+
+bholdr=np.zeros((345600,3),dtype=np.uint8)
+lock=threading.Lock()
+videio = cv2.VideoCapture(0)
+while videio.read()[0]==False:
+   pass
+def gen_frm():
+    global raw
+    global bholdr
+    i=0
+    while True:
+        lock.acquire()
+        x,raw=videio.read()
+        if not x:
+            lock.release()
+            continue
+ #       if i%50==0:
+           # print(type(raw.copy()),type(raw))
+        i+=1
+        print(raw)
+        print(raw.shape,raw.dtype)
+        if raw is None:
+            lock.release()
+            continue
+        bholdr=np.zeros((345600,3),dtype=np.uint8)
+       # print(bholdr)
+        bholdr=np.append(bholdr,raw)
+        bholdr=np.delete(bholdr,range(raw.size-1))
+#        print(bholdr)
+        bholdr=bholdr.reshape(720,1280,3)
+#        print(bholdr)
+        cv.imshow('test',bholdr)
+        lock.release()
+        time.sleep(5)
+t=Thread(target=gen_frm,daemon=True)
+raw=None
+
+t.start()
+while raw is None:
+  pass
+bholdr=np.array([raw,raw,raw])
+#print(type(raw))
+#print(type(bholdr[1]))
+
+def gen_vid():
+  global raw
+  global bholdr
+  print(type(bholdr[1]))
+  while True:
+       lock.acquire()
+       if raw is None:
+            continue
+       raw1=np.asarray(bholdr[1]).copy()
+      # print('thinking')
+ # print(type(raw1))
+       print(type(bholdr[1]))
+        
+       lock.release()
+      # print('thought')
+       x, img_data = cv2.imencode('.jpg', raw1)
+       raw_bytes = img_data.tobytes()
+       yield (b'--frame\r\n'b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes + b'\r\n')
+def gen_proc_vid():
+  global raw
+  while True:
+      lock.acquire()
+      if raw is None:
+           continue
+      og= raw.copy()
+      raw1 = cv2.Canny(raw.copy(),100,200)
+      lock.release()
+     # raw1=cv.adaptiveThreshold(raw1,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,11,2)
+      lines = cv.HoughLinesP(raw1,rho=1,theta=np.pi/180,threshold=100 ,minLineLength=100,maxLineGap=12)
+      raw1= cv.cvtColor(raw1, cv.COLOR_GRAY2BGR)
+      imag = raw1
+      frame = og
+      if lines is None:
+          x, img_data = cv2.imencode('.jpg', raw1)
+          raw_bytes = img_data.tobytes()
+          yield (b'--frame\r\n'
+          b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes + b'\r\n')
+          continue
+      i=0
+      ptlines=[]
+      for line in lines:
+
+          x_i,y_i,x_f,y_f=line[0]
+          ptlines.append([x_i,y_i,x_f,y_f])
+      
+      for lines in ptlines:
+          for clines in ptlines:
+      	      if (lines[3]-lines[1])/(lines[0]-lines[2])-(clines[3]-clines[1])/(clines[0]-clines[2])<=0.4:
+                  cv.line(imag,(lines[0],lines[2]),(lines[1],lines[3]),(0,0,255),4)
+                  cv.line(imag,(clines[0],clines[2]),(clines[1],clines[3]),(0,0,255),4)
+      if len(ptlines)>=2:
+          cv.line(imag,((ptlines[0][0]+ptlines[1][0])//2,(ptlines[0][1]+ptlines[1][1])//2),((ptlines[0][2]+ptlines[1][2])//2,(ptlines[0][3]+ptlines[1][3])//2),(0,255,0),7)
+          #width
+      raw2=cv.addWeighted(frame,0.7,imag,0.3,0)
+      x, img_data = cv2.imencode('.jpg', raw2)
+      raw_bytes = img_data.tobytes()
+     # l.release()
+      yield (b'--frame\r\n'
+      b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes + b'\r\n')
+
+@app.route('/video')
+def video():
+    return  Response(gen_vid(), mimetype='multipart/x-mixed-replace; boundary=frame')
+@app.route('/proc')
+def proc_vid():
+    return Response(gen_proc_vid(), mimetype='multipart/x-mixed-replace;boundary =frame')
+    #gen_proc_vid()
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, threaded=True)
