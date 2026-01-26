@@ -1,191 +1,172 @@
-from flask import Flask,Response
-import cvclass
+from flask import Flask, Response
+import cv2
 import cv2 as cv
 import numpy as np
-app=Flask(__name__)
-video = cv.VideoCapture(0)
-import math
-if not video.isOpened():
-    print('Error')
-def avg_liens(lines):
-    xi_avg=0
-    yi_avg=0
-    xf_avg=0
-    yf_avg=0
-    for line in lines:
-        xi_avg+=line[0]/len(lines)
-        yi_avg+=line[1]/len(lines)
-        xf_avg+=line[2]/len(lines)
-        yf_avg+=line[3]/len(lines)
-    return[int(xi_avg),int(yi_avg),int(xf_avg),int(yf_avg)]
-def slp(line):
-    if math.fabs(line[2]-line[0])-0.001<0:
-        return 1000000,0
-    return (line[3]-line[1])/(line[2]-line[0]),line[3]-(line[2]*(line[3]-line[1])/(line[2]-line[0]))
+import threading
+import time
+from threading import Thread
+app = Flask(__name__)
+global videio
+global bholdr
+bholdr=np.zeros((1440,640*3,3),dtype=np.uint8)
+lock=threading.Lock()
+videio = cv2.VideoCapture(0)
 
-def avg_liens_ymxb(lines):
-    avg_slope=0
-    avg_constant=0
-    if len(lines)==0:
-        return[0,0]
-    for line in lines:
-        s,c=slp(line)
-        avg_slope+=s
-        avg_constant+=c
-    return [avg_slope//len(lines),avg_constant//len(lines)]
-def raw_vid():
+videio.set(cv.CAP_PROP_FRAME_WIDTH,640)
+videio.set(cv.CAP_PROP_FRAME_HEIGHT,1440)
+while videio.read()[0]==False:
+   pass
+print(videio.get(cv.CAP_PROP_FPS))
+def gen_frm():
+    global raw
+    global bholdr
+    i=0
     while True:
-        tester,frame=video.read()
-        if not tester:
+        lock.acquire()
+        x,raw=videio.read()
+        if not x:
+            lock.release()
             continue
-        encode_param = [int(cv.IMWRITE_JPEG_QUALITY), 50]
-        x, img_data = cv.imencode('.jpg', frame,encode_param)
-        raw_bytes = img_data.tobytes()
-        yield (b'--frame\r\n'
-          b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes + b'\r\n')
-def gen_frames_proc():
-    while True:
-        tester,frame=video.read()
-        if not tester:
+ #       if i%50==0:
+           # print(type(raw.copy()),type(raw))
+        i+=1
+#        print(raw)
+#        print(raw.shape,raw.dtype)
+        if raw is None:
+            lock.release()
             continue
-        midline = frame.shape[1]
-        frame_proc=cvclass.cvcol(frame,pathing=True,gray=True)
-    #    frame_proc.dialate(10)
-        frame_proc.erode()
-    #    frame_proc.dialate(27)
-        frame_proc.bluredlines()
-    #   test code for skeletonization alg from https://opencvpython.blogspot.com/2012/05/skeletonization-using-opencv-python.html
-        size = np.size(frame_proc.img)
-        img = frame_proc.ret()
-    #imported algorithm 
-        '''
-        skel=np.zeros( img.shape,np.uint8)
-        ret,img=cv.threshold(img,127,255,0)
-        elmtn=cv.getStructuringElement(cv.MORPH_CROSS,(3,3))
-        finish=False
-        while not finish:
-            eroded=cv.erode(img,element)
-            temp = cv.dilate(eroded,element)
-            temp = cv.subtract(img,temp)
-            skel = cv.bitwise_or(
-        '''
-    
-        #cv.imshow('linves',frame_proc.img)
-        #frame_proc.img=cv.equalizeHist(frame_proc.img)
-        frame_proc.img=cv.Canny(frame_proc.img, 50,100)
-       # cv.imshow('lines',frame_proc.img)
-        #frame_proc.img *= np.array((0,0,255),np.uint8)
-        polygon_points = np.array([[[int(frame.shape[1]*0.2), 0], [int(frame.shape[1]*0.8), 0], [int(frame.shape[1]*0.9), frame.shape[0]], [int(frame.shape[1]*0.1), frame.shape[0]]]], dtype=np.int32)
-        mask = np.zeros((frame_proc.img.shape[0],frame_proc.img.shape[1]),dtype=np.uint8)
-        cv.fillPoly(mask, polygon_points, 255)
-        frame_proc.img = cv.bitwise_and(frame_proc.img,frame_proc.img,mask=mask)
-        lines = cv.HoughLinesP(frame_proc.ret(),rho=1,theta=np.pi/180,threshold=100 ,minLineLength=200,maxLineGap=60)
-        frame_proc.img= cv.cvtColor(frame_proc.img, cv.COLOR_GRAY2BGR)
-        imag=frame_proc.img
-        cv.polylines(imag, polygon_points, isClosed=True, color=(0,255,255), thickness=2)
+       # bholdr=np.zeros((720,1280,3),dtype=np.uint8)
+       # print(bholdr)
+        bholdr=np.append(bholdr,raw)
+        bholdr=np.delete(bholdr,range(raw.size))
+#        print(bholdr)
+        bholdr=bholdr.reshape(1440,640*3,3)
+#        print(bholdr)
+#        cv.imshow('test',bholdr)
+        lock.release()
+#        time.sleep(5)
+t=Thread(target=gen_frm,daemon=True)
+raw=None
 
-       # imag= cv2.bitwise_and(imag, col_msk)
-        #cv.imshow('webcam',imag)
-        #cv.waitKey(1)
-        if lines is None:   
-            continue
-        i=0
-        ptlines=[]
-        for line in lines:
-            x_i,y_i,x_f,y_f=line[0]
-            ptlines.append([x_i,y_i,x_f,y_f])
-            i+=1  
-        if len(ptlines)<2:
-            continue
-        parallel_=[]
-        break9=False
-        ''' 
-        for line0 in ptlines:
-            for line1 in ptlines:
-                if line0==line1:
-                    continue
-                if math.fabs(math.atan(((line0[2]-line0[0])/(line0[3]-line0[1])))-math.atan(((line1[2]-line1[0])/(line1[3]-line1[1]))))<=0.5:
-                    cv.line(imag,(line0[0],line0[1]),(line0[2],line0[3]),(255,0,0),8)
-                    cv.line(imag,(line1[0],line1[1]),(line1[2],line1[3]),(0,255,0),8)
-                    parallel_.append([line0,line1]) 
-                    break
-            if break9:
-                break
-        '''
-        left_lnes=[]
-        right_lnes=[]
-        for line in ptlines:
-            slope,constant=slp(line)
-            if slope is None:
-                if line[0]<frame.shape[1]/2:
-                    left_lnes.append(line)
-                else:
-                    right_lnes.append(line)
-            elif slope<0:
-                right_lnes.append(line)
-            else:
-                left_lnes.append(line)
-            
-        avg_x_i_l=avg_liens(left_lnes)[0]
-        avg_x_f_l=avg_liens(left_lnes)[2]
-        avg_y_i_l=avg_liens(left_lnes)[1]
-        avg_y_f_l=avg_liens(left_lnes)[3]
-        avg_x_i_r=avg_liens(right_lnes)[0]
-        avg_x_f_r=avg_liens(right_lnes)[2]
-        avg_y_i_r=avg_liens(right_lnes)[1]
-        avg_y_f_r=avg_liens(right_lnes)[3]
-        lft_s=avg_liens_ymxb(right_lnes)[0]
-        lft_c=avg_liens_ymxb(right_lnes)[1]
-        r_s=avg_liens_ymxb(left_lnes)[0]
-        r_c=avg_liens_ymxb(left_lnes)[1]
-        a_s=(r_s+lft_s)/2
-        a_c=(lft_c+r_c)//2
-        '''
-        for lines in ptlines:
-                avg_x_i+= int(lines[0]/(len(ptlines))
-                avg_x_f+=int(lines[2]/(len(ptlines)) 
-                avg_y_i+= int(lines[1/(len(ptlines)
-                avg_y_f+= int(lines[3]/(len(ptlines))
-                avg_slope+= int(lines[3]-lines[1]/lines[2]-lines[0])
-        
-        cv.line(imag,(avg_x_i,avg_y_i),(avg_x_f,avg_y_f),(0,0,255),7)
-        
-        cv.line(imag,(imag.shape[0]//2,imag.shape[0]*int(a_s)+a_c),((avg_x_f_l+avg_x_f_r)//2,(avg_x_f_l+avg_x_f_r)//2*int(a_s)+a_c),(255,255,0),7)
-        '''
-        if not math.fabs(a_s)-0.001>0 and a_s != None:
-            y_i=imag.shape[0]
-            y_f=int(imag.shape[0]*0.1)
-            try:
-                x_i=int((y_i-a_c) // a_s)
-                x_f = int((y_f - a_c) // a_s)
-                cv.line(imag,((avg_x_i_l+avg_x_i_r)//2,(avg_y_i_l+avg_y_i_r)//2), ((avg_x_f_l+avg_x_f_r)//2,(avg_y_f_l+avg_y_f_r)//2),(0,255,0),7)
-            except:
-                cv.line(imag, ((avg_x_i_l+avg_x_i_r)//2, y_i), ((avg_x_f_l+avg_x_f_r)//2, y_f), (0,255,0), 7)
-        else:
-           #print('here')
-           cv.line(imag,((avg_x_i_l+avg_x_i_r)//2,int(frame.shape[0]*0.8)), ((avg_x_f_l+avg_x_f_r)//2,(avg_y_f_l+avg_y_f_r)//2),(0,255,0),7)
-           #break
-        cv.line(imag,(avg_x_i_l,avg_y_i_l),(avg_x_f_l,avg_y_f_l),(0,0,255),7)
-        cv.line(imag,(avg_x_i_r,avg_y_i_r),(avg_x_f_r,avg_y_f_r),(255,0,0),7)
-        #cv.line(imag,(avg_x_i_l+avg_x_i_r)//2,(avg_y_i_l+avg_y_i_r)//2), ((avg_x_f_l+avg_x_f_r)//2,(avg_y_f_l+avg_y_f_r)//2),(0,255,0),7)
-        fin_frm=cv.addWeighted(frame,0.6,imag,0.4,0)
-        #cv.imshow('webbcam',fin_frm)
-        encode_param = [int(cv.IMWRITE_JPEG_QUALITY), 50]
-        x, img_data = cv.imencode('.jpg', fin_frm,encode_param)
-        raw_bytes = img_data.tobytes()
-        yield (b'--frame\r\n'
-          b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes + b'\r\n')
-        cv.waitKey(1)
-    video.release()
+t.start()
+while raw is None:
+  pass
 
+def gen_vid():
+  global raw
+  global bholdr
+ # print(type(bholdr[1]))
+  while True:
+       lock.acquire()
+       if bholdr is None:
+            continue
+       raw1=np.asarray(bholdr[:160,:480]).copy()
+      # print('thinking')
+ # print(type(raw1))
+ #      print(type(bholdr[1]))
+       raw1=cv.resize(raw1,(640,480)) 
+       lock.release()
+      # print('thought')
+       x, img_data = cv2.imencode('.jpg', raw1)
+       raw_bytes = img_data.tobytes()
+       yield (b'--frame\r\n'b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes + b'\r\n')
+
+
+def gen_proc_vid():
+  global raw
+  while True:
+      lock.acquire()
+      if raw is None:
+           continue
+      og= bholdr[:160,:480].copy()
+      raw1 = cv2.Canny(bholdr[:160,:480].copy(),100,200)
+      lock.release()
+     # raw1=cv.adaptiveThreshold(raw1,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,11,2)
+     # lines = cv.HoughLinesP(raw1,rho=1,theta=np.pi/180,threshold=100 ,minLineLength=100,maxLineGap=12)
+      lines = cv. HoughLines(raw1,1,np.pi/180,150, None,0,0)
+     
+      raw1= cv.cvtColor(raw1, cv.COLOR_GRAY2BGR)
+      imag = raw1
+      frame = og
+      if lines is None:
+          x, img_data = cv2.imencode('.jpg', og)
+          raw_bytes = img_data.tobytes()
+          yield (b'--frame\r\n'
+          b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes +b'\r\n')
+          continue  
+      parallel=[]
+      thresh=20
+      athresh=10
+      for i in lines:
+           rho,theta = i[0]
+           for  l in lines:
+               if (l[0][0]-rho>thresh) and l[0][1]-theta<(athresh*np.pi/180):
+                   parallel.append([(rho,l[0][0]),theta])
+      rho=0
+      rhol=0
+      rhor=0
+      theta=0
+      if len(parallel)==0:
+          x, img_data = cv2.imencode('.jpg', og)
+          raw_bytes = img_data.tobytes()
+          yield (b'--frame\r\n'
+          b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes +b'\r\n')
+          continue
+      for par in parallel:
+          rho1,rho2 = par[0]
+          rho += (rho1+rho2)/2
+          theta+=par[1]
+      theta*=1/len(parallel)
+      rho*=1/len(parallel)
+      a = np.cos(theta) 
+      b = np.sin(theta)
+      x0 = a*rho
+      y0 = b*rho
+      x1 = int(x0 + 1000*(-b))
+      y1 = int(y0 + 1000*(a))
+      x2 = int(x0 - 1000*(-b))
+      y2 = int(y0 - 1000*(a))
+      cv.line(og,(x1,y1),(x2,y2),(255,0,0),5)
+#      
+      for par in parallel:
+          rho1,rho2=par[0]
+          rhol+=max(par[0])
+          rhol+=min(par[0])
+      rhol*=1/len(parallel)
+      rhor*=1/len(parallel)
+      a = np.cos(theta)
+      b = np.sin(theta)
+      x0 = a*rhol
+      y0 = b*rhol
+      x1 = int(x0 + 1000*(-b))
+      y1 = int(y0 + 1000*(a))
+      x2 = int(x0 - 1000*(-b))
+      y2 = int(y0 - 1000*(a))
+      cv.line(og,(x1,y1),(x2,y2),(0,255,0),5)
+      a = np.cos(theta)
+      b = np.sin(theta)
+      x0 = a*rhor
+      y0 = b*rhor
+      x1 = int(x0 + 1000*(-b))
+      y1 = int(y0 + 1000*(a))
+      x2 = int(x0 - 1000*(-b))
+      y2 = int(y0 - 1000*(a))
+      cv.line(og,(x1,y1),(x2,y2),(0,0,255),5)
+#      break
+#      raw2=cv.addWeighted(frame,0.7,imag,0.3,0)
+      raw2=og 
+      x, img_data = cv2.imencode('.jpg', raw2)
+      raw_bytes = img_data.tobytes()
+     # l.release()
+      yield (b'--frame\r\n'
+      b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes + b'\r\n')
+
+@app.route('/video')
+def video():
+    return  Response(gen_vid(), mimetype='multipart/x-mixed-replace; boundary=frame')
 @app.route('/proc_vid')
 def proc_vid():
-   return Response(gen_frames_proc(), mimetype='multipart/x-mixed-replace; boundary=frame')
-@app.route('/vid')
-def vid():
-   return Response(raw_vid(), mimetype='multipart/x-mixed-replace; boundary=frame')
-@app.route('/log')
-   log=open('log.txt','a')
-   log.append(request.forms.get('logdata'))
-   log.close()
-app.run(host='0.0.0.0', port=5000, threaded=True)
+    return Response(gen_proc_vid(), mimetype='multipart/x-mixed-replace;boundary =frame')
+    #gen_proc_vid()
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, threaded=True)
