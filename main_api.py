@@ -83,8 +83,15 @@ def gen_proc_vid():
       lock.release()
      # raw1=cv.adaptiveThreshold(raw1,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,11,2)
      # lines = cv.HoughLinesP(raw1,rho=1,theta=np.pi/180,threshold=100 ,minLineLength=100,maxLineGap=12)
-      lines = cv. HoughLines(raw1,1,np.pi/180,150, None,0,0)
-     
+      lines = cv.HoughLines(raw1,1,np.pi/180,150, None,0,0)
+      img,contours,h = cv.findContours(raw1, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+      numgus=0
+      contours=np.asarray(contours)
+      for i in np.nditer(contours):
+          numgus+=1
+          poit.update({numgus%len(contours):i})
+         # print(contours[i])
+      time.sleep(10)
       raw1= cv.cvtColor(raw1, cv.COLOR_GRAY2BGR)
       imag = raw1
       frame = og
@@ -152,6 +159,7 @@ def gen_proc_vid():
       x2 = int(x0 - 1000*(-b))
       y2 = int(y0 - 1000*(a))
       cv.line(og,(x1,y1),(x2,y2),(0,0,255),5)
+      
 #      break
 #      raw2=cv.addWeighted(frame,0.7,imag,0.3,0)
       raw2=og 
