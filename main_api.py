@@ -16,7 +16,7 @@ videio.set(cv.CAP_PROP_FRAME_WIDTH,640)
 videio.set(cv.CAP_PROP_FRAME_HEIGHT,1440)
 while videio.read()[0]==False:
    pass
-print(videio.get(cv.CAP_PROP_FPS))
+print("Frames Per Second",videio.get(cv.CAP_PROP_FPS))
 def gen_frm():
     global raw
     global bholdr
