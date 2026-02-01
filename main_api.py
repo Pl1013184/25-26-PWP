@@ -166,7 +166,7 @@ def video():
     return  Response(gen_vid(), mimetype='multipart/x-mixed-replace; boundary=frame')
 @app.route('/proc_vid')
 def proc_vid():
-    return Response(gen_proc_vid(), mimetype='multipart/x-mixed-replace;boundary =frame')
+    return Response(gen_proc_vid(), mimetype='multipart/x-mixed-replace;boundary=frame')
     #gen_proc_vid()
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, threaded=True)
