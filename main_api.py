@@ -197,7 +197,7 @@ def log():
 	    open.close()
 	except:pass
 	write= open("log.txt","a")
-	write.write(request.args.get())
+	write.write(request.args.get("logdata"))
 	write.close()
 
 if __name__ == '__main__':
