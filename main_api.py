@@ -1,5 +1,5 @@
 
-from flask import Flask, Response
+from flask import Flask, Response,request
 import cv2
 import cv2 as cv
 import numpy as np
@@ -192,6 +192,13 @@ def proc_vid():
     #gen_proc_vid()
 @app.route("/log")
 def log():
+	try: 
+	    open = open("log.txt","x") 
+	    open.close()
+	except:pass
+	write= open("log.txt","a")
+	write.write(request.args.get())
+	write.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, threaded=True)
