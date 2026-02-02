@@ -1,3 +1,4 @@
+
 from flask import Flask, Response
 import cv2
 import cv2 as cv
@@ -16,6 +17,7 @@ print("Width:", videio.get(cv2.CAP_PROP_FRAME_WIDTH))
 print("Height:", videio.get(cv2.CAP_PROP_FRAME_HEIGHT))
 videio.set(cv.CAP_PROP_FRAME_WIDTH,640)
 videio.set(cv.CAP_PROP_FRAME_HEIGHT,480)
+videio.set(cv.CAP_PROP_FPS,30)
 #while videio.read()[0]==False:
 #   pass
 print("Frames Per Second",videio.get(cv.CAP_PROP_FPS))
@@ -39,7 +41,14 @@ def gen_frm():
             i=0
 t=Thread(target=gen_frm,daemon=True)
 raw=None
-
+def sumofc(list):
+    len_=[]
+    ret=list[0]
+    for i in list:
+        len_.append(len(i))
+    for i in list[1:-1]:
+        ret+=i[0:min(len_),:,:]
+    return ret
 t.start()
 #while raw is None:
 #  pass
@@ -96,60 +105,75 @@ def gen_proc_vid():
       rhor=0
       theta=0
       #cv.line(og,(0,0),(640,480),(255,0,0),7)
-      if len(parallel)==0:
-          print('No parallel lines found')
-          x, img_data = cv2.imencode('.jpg', og)
-          raw_bytes = img_data.tobytes()
-          yield (b'--frame\r\n'
-          b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes +b'\r\n')
-          continue
-      for par in parallel:
-          rho1,rho2 = par[0]
-          rho += (rho1+rho2)/2
-          theta+=par[1]
-      theta*=1/len(parallel)
-      rho*=1/len(parallel)
-      a = np.cos(theta) 
-      b = np.sin(theta)
-      x0 = a*rho
-      y0 = b*rho
-      x1 = int(x0 + 1000*(-b))
-      y1 = int(y0 + 1000*(a))
-      x2 = int(x0 - 1000*(-b))
-      y2 = int(y0 - 1000*(a))
-      cv.line(og,(x1,y1),(x2,y2),(255,0,0),5)
-#      
-      for par in parallel:
-          rho1,rho2=par[0]
-          rhol+=max(par[0])
-          rhol+=min(par[0])
-      rhol*=1/len(parallel)
-      rhor*=1/len(parallel)
-      a = np.cos(theta)
-      b = np.sin(theta)
-      x0 = a*rhol
-      y0 = b*rhol
-      x1 = int(x0 + 1000*(-b))
-      y1 = int(y0 + 1000*(a))
-      x2 = int(x0 - 1000*(-b))
-      y2 = int(y0 - 1000*(a))
-      cv.line(og,(x1,y1),(x2,y2),(0,255,0),5)
-      a = np.cos(theta)
-      b = np.sin(theta)
-      x0 = a*rhor
-      y0 = b*rhor
-      x1 = int(x0 + 1000*(-b))
-      y1 = int(y0 + 1000*(a))
-      x2 = int(x0 - 1000*(-b))
-      y2 = int(y0 - 1000*(a))
-      cv.line(og,(x1,y1),(x2,y2),(0,0,255),5)
+      if len(parallel)!=0:
+          for par in parallel:
+              rho1,rho2 = par[0]
+              rho += (rho1+rho2)/2
+              theta+=par[1]
+          theta*=1/len(parallel)
+          rho*=1/len(parallel)
+          a = np.cos(theta) 
+          b = np.sin(theta)
+          x0 = a*rho
+          y0 = b*rho
+          x1 = int(x0 + 1000*(-b))
+          y1 = int(y0 + 1000*(a))
+          x2 = int(x0 - 1000*(-b))
+          y2 = int(y0 - 1000*(a))
+          cv.line(og,(x1,y1),(x2,y2),(255,0,0),5)
+          for par in parallel:
+              rho1,rho2=par[0]
+              rhol+=max(par[0])
+              rhol+=min(par[0])
+          rhol*=1/len(parallel)
+          rhor*=1/len(parallel)
+          a = np.cos(theta)
+          b = np.sin(theta)
+          x0 = a*rhol
+          y0 = b*rhol
+          x1 = int(x0 + 1000*(-b))
+          y1 = int(y0 + 1000*(a))
+          x2 = int(x0 - 1000*(-b))
+          y2 = int(y0 - 1000*(a))
+          cv.line(og,(x1,y1),(x2,y2),(0,255,0),5)
+          a = np.cos(theta)
+          b = np.sin(theta)
+          x0 = a*rhor
+          y0 = b*rhor
+          x1 = int(x0 + 1000*(-b))
+          y1 = int(y0 + 1000*(a))
+          x2 = int(x0 - 1000*(-b))
+          y2 = int(y0 - 1000*(a))
+          cv.line(og,(x1,y1),(x2,y2),(0,0,255),5)
       gray=cv.cvtColor(og,cv.COLOR_BGR2GRAY)
+      gray = cv.GaussianBlur(gray,(5,5), 1)
       ret, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
       contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-      cv.ap
-      cv2.drawContours(og, contours, -1, (0,255,255), 2)
+      #https://pyimagesearch.com/2021/10/06/opencv-contour-approximation/
+      clist=[]
+      for c in contours:
+          for eps in np.linspace(0.001, 0.05, 10):
+	# approximate the contour
+              peri = cv2.arcLength(c, True)
+              approx = cv2.approxPolyDP(c, eps * peri, False)
+	# draw the approximated contour on the image
+              output = og.copy()
+              #cv2.drawContours(og, [approx], -1, (0, 255, 0), 3)
+              text = "eps={:.4f}, num_pts={}".format(eps, len(approx)) 
+              if len(approx)==15:
+                  clist.append(approx)
+          cv.drawContours(og, [approx],-1,(0,244,144),5)
+          #clist.append(approx)
+      if clist!=[]:
+          avg=sum(clist)/len(clist)
+          avg=avg.reshape(-1,1,2)
+          avg= avg.astype(np.int32)
+      #print(avg[:,0,:])
+          cv.drawContours(og,[avg],-1,(125,234,34),7)
       
-      time.sleep(0.01)
+      
+            
+      time.sleep(0.001)
 #      break
 #      raw2=cv.addWeighted(frame,0.7,imag,0.3,0)
       raw2=og 
@@ -166,5 +190,8 @@ def video():
 def proc_vid():
     return Response(gen_proc_vid(), mimetype='multipart/x-mixed-replace; boundary=frame')
     #gen_proc_vid()
+@app.route("/log")
+def log():
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, threaded=True)
