@@ -154,7 +154,7 @@ def gen_proc_vid():
       for c in contours:
           for eps in np.linspace(0.001, 0.05, 10):
 	# approximate the contour
-              peri = cv2.arcLength(c, True)
+              peri = cv2.arcLength(c, False)
               approx = cv2.approxPolyDP(c, eps * peri, False)
 	# draw the approximated contour on the image
               output = og.copy()
