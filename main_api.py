@@ -63,8 +63,11 @@ def gen_vid():
            continue
        raw1=bholdr[3].copy()        
        lock.release()
-       raw1=cv.resize(raw1,(640,480))
+    #   raw1=cv.resize(raw1,(640,480))
       # print('thought')
+       #og = cv.cvtColor(raw1, cv.COLOR_BGR2GRAY)
+       #og = cv.GaussianBlur(og,(11,11),31) 
+       #og = cv.dilate(og,(7,7),iterations=5)
        x, img_data = cv2.imencode('.jpg', raw1)
        raw_bytes = img_data.tobytes()
        time.sleep(0.01)
@@ -79,15 +82,26 @@ def gen_proc_vid():
           continue
       og=bholdr[3].copy()        
       lock.release()
-      raw1 = cv2.Canny(og,100,200)
+     # raw1 = cv2.Canny(og,100,200)
      # raw1=cv.adaptiveThreshold(raw1,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,11,2)
      # lines = cv.HoughLinesP(raw1,rho=1,theta=np.pi/180,threshold=100 ,minLineLength=100,maxLineGap=12)
-      lines = cv.HoughLines(raw1,1,np.pi/180,150, None,0,0)
-      raw1= cv.cvtColor(raw1, cv.COLOR_GRAY2BGR)
-      imag = raw1
-      frame = og
+      #lines = cv.HoughLines(raw1,1,np.pi/180,150, None,0,0)
+      #raw1= cv.cvtColor(raw1, cv.COLOR_GRAY2BGR)
+      #imag = raw1
+      frame = og.copy()
+      emlt=cv.getStructuringElement(cv.MORPH_RECT,(19,19))
+      og = cv.cvtColor(og, cv.COLOR_BGR2GRAY)
+      og = cv.GaussianBlur(og,(13,13),31)
+      og = cv.dilate(og,emlt,iterations=1)
+      og = cv.adaptiveThreshold(og,195,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY_INV,15,3)
+     # cv.erode(og,emlt,iterations=40)
+      og = cv.GaussianBlur(og,(5,5),6)
+      og = cv.Canny(og,150,250)     
+      prc=og.copy()
+      lines = cv.HoughLines(og,1,np.pi/180,150,None,0,0)
+      #lines=[("stupid")]
       if lines is None:
-          x, img_data = cv2.imencode('.jpg', og)
+          x, img_data = cv2.imencode('.jpg', frame)
           raw_bytes = img_data.tobytes()
           yield (b'--frame\r\n'
           b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes +b'\r\n')
@@ -120,7 +134,7 @@ def gen_proc_vid():
           y1 = int(y0 + 1000*(a))
           x2 = int(x0 - 1000*(-b))
           y2 = int(y0 - 1000*(a))
-          cv.line(og,(x1,y1),(x2,y2),(255,0,0),5)
+         # cv.line(frame,(x1,y1),(x2,y2),(255,0,0),5)
           for par in parallel:
               rho1,rho2=par[0]
               rhol+=max(par[0])
@@ -135,7 +149,7 @@ def gen_proc_vid():
           y1 = int(y0 + 1000*(a))
           x2 = int(x0 - 1000*(-b))
           y2 = int(y0 - 1000*(a))
-          cv.line(og,(x1,y1),(x2,y2),(0,255,0),5)
+         # cv.line(frame,(x1,y1),(x2,y2),(0,255,0),5)
           a = np.cos(theta)
           b = np.sin(theta)
           x0 = a*rhor
@@ -144,15 +158,18 @@ def gen_proc_vid():
           y1 = int(y0 + 1000*(a))
           x2 = int(x0 - 1000*(-b))
           y2 = int(y0 - 1000*(a))
-          cv.line(og,(x1,y1),(x2,y2),(0,0,255),5)
-      gray=cv.cvtColor(og,cv.COLOR_BGR2GRAY)
-      gray = cv.GaussianBlur(gray,(5,5), 1)
-      ret, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
-      contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+         # cv.line(frame,(x1,y1),(x2,y2),(0,0,255),5)
+     # gray=cv.cvtColor(og,cv.COLOR_BGR2GRAY)
+     # gray = cv.GaussianBlur(gray,(5,5), 1)
+     # ret, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+      contours, _ = cv2.findContours(prc, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+      
       #https://pyimagesearch.com/2021/10/06/opencv-contour-approximation/
       clist=[]
       for c in contours:
-          for eps in np.linspace(0.001, 0.05, 10):
+          if cv.arcLength(c,False)<650:
+              continue
+          for eps in np.linspace(0.001, 0.1,15):
 	# approximate the contour
               peri = cv2.arcLength(c, False)
               approx = cv2.approxPolyDP(c, eps * peri, False)
@@ -162,21 +179,22 @@ def gen_proc_vid():
               text = "eps={:.4f}, num_pts={}".format(eps, len(approx)) 
               if len(approx)==15:
                   clist.append(approx)
-          cv.drawContours(og, [approx],-1,(0,244,144),5)
-          #clist.append(approx)
+                  break
+          cv.drawContours(frame, [approx],-1,(0,244,144),5)
+         # clist.append(approx)
       if clist!=[]:
           avg=sum(clist)/len(clist)
           avg=avg.reshape(-1,1,2)
           avg= avg.astype(np.int32)
       #print(avg[:,0,:])
-          cv.drawContours(og,[avg],-1,(125,234,34),7)
-      
+          cv.drawContours(frame,[avg],-1,(225,234,4),7)
+          clist=[]
       
             
       time.sleep(0.001)
 #      break
 #      raw2=cv.addWeighted(frame,0.7,imag,0.3,0)
-      raw2=og 
+      raw2=frame 
       x, img_data = cv2.imencode('.jpg', raw2)
       raw_bytes = img_data.tobytes()
      # l.release()
