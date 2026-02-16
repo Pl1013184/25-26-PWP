@@ -1,5 +1,5 @@
 
-from flask import Flask, Response,request
+from flask import Flask, Response
 import cv2
 import cv2 as cv
 import numpy as np
@@ -17,9 +17,9 @@ print("Width:", videio.get(cv2.CAP_PROP_FRAME_WIDTH))
 print("Height:", videio.get(cv2.CAP_PROP_FRAME_HEIGHT))
 videio.set(cv.CAP_PROP_FRAME_WIDTH,640)
 videio.set(cv.CAP_PROP_FRAME_HEIGHT,480)
-videio.set(cv.CAP_PROP_FPS,30)
-#while videio.read()[0]==False:
-#   pass
+#videio.set(cv.CAP_PROP_FPS,30)
+while videio.read()[0]==False:
+   pass
 print("Frames Per Second",videio.get(cv.CAP_PROP_FPS))
 def gen_frm():
     global bholdr
@@ -63,11 +63,8 @@ def gen_vid():
            continue
        raw1=bholdr[3].copy()        
        lock.release()
-    #   raw1=cv.resize(raw1,(640,480))
+       raw1=cv.resize(raw1,(640,480))
       # print('thought')
-       #og = cv.cvtColor(raw1, cv.COLOR_BGR2GRAY)
-       #og = cv.GaussianBlur(og,(11,11),31) 
-       #og = cv.dilate(og,(7,7),iterations=5)
        x, img_data = cv2.imencode('.jpg', raw1)
        raw_bytes = img_data.tobytes()
        time.sleep(0.01)
@@ -82,26 +79,25 @@ def gen_proc_vid():
           continue
       og=bholdr[3].copy()        
       lock.release()
-     # raw1 = cv2.Canny(og,100,200)
+      frame=og.copy()
+      #raw1 = cv2.Canny(og,100,200)
      # raw1=cv.adaptiveThreshold(raw1,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,11,2)
      # lines = cv.HoughLinesP(raw1,rho=1,theta=np.pi/180,threshold=100 ,minLineLength=100,maxLineGap=12)
       #lines = cv.HoughLines(raw1,1,np.pi/180,150, None,0,0)
-      #raw1= cv.cvtColor(raw1, cv.COLOR_GRAY2BGR)
-      #imag = raw1
-      frame = og.copy()
-      emlt=cv.getStructuringElement(cv.MORPH_RECT,(19,19))
-      og = cv.cvtColor(og, cv.COLOR_BGR2GRAY)
-      og = cv.GaussianBlur(og,(13,13),31)
-      og = cv.dilate(og,emlt,iterations=1)
-      og = cv.adaptiveThreshold(og,195,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY_INV,15,3)
-     # cv.erode(og,emlt,iterations=40)
-      og = cv.GaussianBlur(og,(5,5),6)
-      og = cv.Canny(og,150,250)     
-      prc=og.copy()
-      lines = cv.HoughLines(og,1,np.pi/180,150,None,0,0)
-      #lines=[("stupid")]
+      #raw1= cv.cvtColor(raw1, cv.COLOR_GRAY2BGR)    
+      og=cv.cvtColor(og,cv.COLOR_BGR2HSV)
+      h,s,v=cv.split(og)
+      v[:,:]=245
+      h[:,:]=0
+      og=cv.merge((h,s,v))
+      og=cv.cvtColor(og,cv.COLOR_HSV2BGR)
+      gray=cv.cvtColor(og,cv.COLOR_BGR2GRAY)
+      og=cv.adaptiveThreshold(gray,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY_INV,11,2)
+      og=cv.GaussianBlur(og,(5,5),7)
+      og=cv.Canny(og,100,300)
+      lines=cv.HoughLines(og,1,np.pi/180,150,None,0,0)
       if lines is None:
-          x, img_data = cv2.imencode('.jpg', frame)
+          x, img_data = cv2.imencode('.jpg', og)
           raw_bytes = img_data.tobytes()
           yield (b'--frame\r\n'
           b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes +b'\r\n')
@@ -134,11 +130,11 @@ def gen_proc_vid():
           y1 = int(y0 + 1000*(a))
           x2 = int(x0 - 1000*(-b))
           y2 = int(y0 - 1000*(a))
-         # cv.line(frame,(x1,y1),(x2,y2),(255,0,0),5)
+          cv.line(frame,(x1,y1),(x2,y2),(255,0,0),5)
           for par in parallel:
               rho1,rho2=par[0]
               rhol+=max(par[0])
-              rhol+=min(par[0])
+              rhor+=min(par[0])
           rhol*=1/len(parallel)
           rhor*=1/len(parallel)
           a = np.cos(theta)
@@ -149,7 +145,7 @@ def gen_proc_vid():
           y1 = int(y0 + 1000*(a))
           x2 = int(x0 - 1000*(-b))
           y2 = int(y0 - 1000*(a))
-         # cv.line(frame,(x1,y1),(x2,y2),(0,255,0),5)
+          cv.line(frame,(x1,y1),(x2,y2),(0,255,0),5)
           a = np.cos(theta)
           b = np.sin(theta)
           x0 = a*rhor
@@ -158,20 +154,17 @@ def gen_proc_vid():
           y1 = int(y0 + 1000*(a))
           x2 = int(x0 - 1000*(-b))
           y2 = int(y0 - 1000*(a))
-         # cv.line(frame,(x1,y1),(x2,y2),(0,0,255),5)
-     # gray=cv.cvtColor(og,cv.COLOR_BGR2GRAY)
-     # gray = cv.GaussianBlur(gray,(5,5), 1)
-     # ret, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
-      contours, _ = cv2.findContours(prc, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-      
+          cv.line(og,(x1,y1),(x2,y2),(0,0,255),5)
+      #gray=cv.cvtColor(og,cv.COLOR_BGR2GRAY)
+      gray = cv.GaussianBlur(gray,(5,5), 1)
+      ret, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+      contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
       #https://pyimagesearch.com/2021/10/06/opencv-contour-approximation/
       clist=[]
       for c in contours:
-          if cv.arcLength(c,False)<650:
-              continue
-          for eps in np.linspace(0.001, 0.1,15):
+          for eps in np.linspace(0.001, 0.05, 10):
 	# approximate the contour
-              peri = cv2.arcLength(c, False)
+              peri = cv2.arcLength(c, True)
               approx = cv2.approxPolyDP(c, eps * peri, False)
 	# draw the approximated contour on the image
               output = og.copy()
@@ -179,22 +172,21 @@ def gen_proc_vid():
               text = "eps={:.4f}, num_pts={}".format(eps, len(approx)) 
               if len(approx)==15:
                   clist.append(approx)
-                  break
           cv.drawContours(frame, [approx],-1,(0,244,144),5)
-         # clist.append(approx)
+          #clist.append(approx)
       if clist!=[]:
-          avg=sum(clist)/len(clist)
+          avg=sumofc(clist)/len(clist)
           avg=avg.reshape(-1,1,2)
           avg= avg.astype(np.int32)
       #print(avg[:,0,:])
-          cv.drawContours(frame,[avg],-1,(225,234,4),7)
-          clist=[]
+          cv.drawContours(frame,[avg],-1,(125,234,34),7)
+      
       
             
       time.sleep(0.001)
 #      break
 #      raw2=cv.addWeighted(frame,0.7,imag,0.3,0)
-      raw2=frame 
+      raw2=frame
       x, img_data = cv2.imencode('.jpg', raw2)
       raw_bytes = img_data.tobytes()
      # l.release()
@@ -210,13 +202,7 @@ def proc_vid():
     #gen_proc_vid()
 @app.route("/log")
 def log():
-	try: 
-	    open = open("log.txt","x") 
-	    open.close()
-	except:pass
-	write= open("log.txt","a")
-	write.write(request.args.get("logdata"))
-	write.close()
+    pass
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+    app.run(host='0.0.0.0', port=5000, threaded=True,debug=False)
