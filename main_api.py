@@ -84,7 +84,8 @@ def gen_proc_vid():
      # raw1=cv.adaptiveThreshold(raw1,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,11,2)
      # lines = cv.HoughLinesP(raw1,rho=1,theta=np.pi/180,threshold=100 ,minLineLength=100,maxLineGap=12)
       #lines = cv.HoughLines(raw1,1,np.pi/180,150, None,0,0)
-      #raw1= cv.cvtColor(raw1, cv.COLOR_GRAY2BGR)    
+      #raw1= cv.cvtColor(raw1, cv.COLOR_GRAY2BGR)
+      elmt=cv.getStructuringElement(cv.MORPH_RECT,(3,3))    
       og=cv.cvtColor(og,cv.COLOR_BGR2HSV)
       h,s,v=cv.split(og)
       v[:,:]=245
@@ -93,10 +94,13 @@ def gen_proc_vid():
       og=cv.cvtColor(og,cv.COLOR_HSV2BGR)
       gray=cv.cvtColor(og,cv.COLOR_BGR2GRAY)
       og=cv.adaptiveThreshold(gray,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY_INV,11,2)
-      og=cv.GaussianBlur(og,(5,5),7)
-      og=cv.Canny(og,100,300)
+      og=cv.equalizeHist(og)
+      og=cv.GaussianBlur(og,(5,5),15)
+      og=cv.erode(og,elmt)
+      #og=cv.Canny(og,100,600)
       lines=cv.HoughLines(og,1,np.pi/180,150,None,0,0)
-      if lines is None:
+      test=True
+      if lines is not None or test:
           x, img_data = cv2.imencode('.jpg', og)
           raw_bytes = img_data.tobytes()
           yield (b'--frame\r\n'
@@ -154,7 +158,7 @@ def gen_proc_vid():
           y1 = int(y0 + 1000*(a))
           x2 = int(x0 - 1000*(-b))
           y2 = int(y0 - 1000*(a))
-          cv.line(og,(x1,y1),(x2,y2),(0,0,255),5)
+          cv.line(frame,(x1,y1),(x2,y2),(0,0,255),5)
       #gray=cv.cvtColor(og,cv.COLOR_BGR2GRAY)
       gray = cv.GaussianBlur(gray,(5,5), 1)
       ret, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
@@ -162,6 +166,8 @@ def gen_proc_vid():
       #https://pyimagesearch.com/2021/10/06/opencv-contour-approximation/
       clist=[]
       for c in contours:
+          if cv.arcLength(c,False)>800:
+              continue
           for eps in np.linspace(0.001, 0.05, 10):
 	# approximate the contour
               peri = cv2.arcLength(c, True)
