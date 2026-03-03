@@ -1,0 +1,53 @@
+from flask import Flask, Response
+import cv2
+import cv2 as cv
+import numpy as np
+import threading
+import time
+from threading import Thread
+app = Flask(__name__)
+global videio
+global bholdr
+bholdr=np.zeros((1440,640*3,3),dtype=np.uint8)
+lock=threading.Lock()
+videio = cv2.VideoCapture(0)
+
+videio.set(cv.CAP_PROP_FRAME_WIDTH,640)
+videio.set(cv.CAP_PROP_FRAME_HEIGHT,1440)
+while videio.read()[0]==False:
+   pass
+print("Frames Per Second",videio.get(cv.CAP_PROP_FPS))
+def gen_frm():
+    global raw
+    global bholdr
+    i=0
+    while True:
+        lock.acquire()
+        x,raw=videio.read()
+        if not x:
+            lock.release()
+            continue
+ #       if i%50==0:
+           # print(type(raw.copy()),type(raw))
+        i+=1
+#        print(raw)
+#        print(raw.shape,raw.dtype)
+        if raw is None:
+            lock.release()
+            continue
+       # bholdr=np.zeros((720,1280,3),dtype=np.uint8)
+       # print(bholdr)
+        bholdr=np.append(bholdr,raw)
+        bholdr=np.delete(bholdr,range(raw.size))
+#        print(bholdr)
+        bholdr=bholdr.reshape(1440,640*3,3)
+#        print(bholdr)
+#        cv.imshow('test',bholdr)
+        lock.release()
+#        time.sleep(5)
+t=Thread(target=gen_frm,daemon=True)
+raw=None
+
+t.start()
+while raw is None:
+  pass
