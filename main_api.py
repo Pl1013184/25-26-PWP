@@ -64,7 +64,9 @@ def gen_vid():
        raw1=bholdr[3].copy()
        lock.release()
        raw1=cv.resize(raw1,(640,480))
-      # print('thought')
+       pts= np.array([[150,55],[510,55],[640,230],[0,230]],np.int32)
+       pts=pts.reshape((-1,1,2))
+       cv.polylines(raw1,[pts],True,(0,255,255),thickness=5)
        x, img_data = cv2.imencode('.jpg', raw1)
        raw_bytes = img_data.tobytes()
        time.sleep(0.01)
@@ -72,9 +74,9 @@ def gen_vid():
 def showimg(og):
     x, img_data = cv2.imencode('.jpg', og)
     raw_bytes = img_data.tobytes()
+    time.sleep(0.01)
     return (b'--frame\r\n'
           b'Content-Type: image/jpeg\r\n\r\n' + raw_bytes +b'\r\n')
-    time.sleep(0.01) 
 
 def gen_proc_vid():
   while True:
@@ -87,15 +89,15 @@ def gen_proc_vid():
      # raw1=cv.adaptiveThreshold(raw1,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,11,2)
      # lines = cv.HoughLinesP(raw1,rho=1,theta=np.pi/180,threshold=100 ,minLineLength=100,maxLineGap=12)
      # imag = raw1
-      
-      #cv.circle(og,(150,75),5,(255,0,0),-1)
-      #cv.circle(og,(400,75),5,(255,0,0),-1)
-      #cv.circle(og,(0,480),5,(255,0,0),-1)
-      #cv.circle(og,(640,480),5,(255,0,0),-1)
-      #cv.circle(og,(0,380),5,(255,0,0),-1)
+      og=og[:][:230]
+      cv.circle(og,(150,55),5,(255,0,0),-1)
+      cv.circle(og,(470,55),5,(255,0,0),-1)
+      cv.circle(og,(0,230),5,(255,0,0),-1)
+      cv.circle(og,(640,230),5,(255,0,0),-1)
+      cv.circle(og,(0,380),5,(255,0,0),-1)
       rows,cols,ch = og.shape
-      pts1 = np.float32([[150,75],[400,75],[640,480],[0,480]])
-      pts2 = np.float32([[150,75],[400,75],[400,480],[150,480]])
+      pts1 = np.float32([[150,55],[510,55],[640,230],[0,230]])
+      pts2 = np.float32([[20,20],[600,40],[640,480],[0,480]])
       M = cv.getPerspectiveTransform(pts1,pts2)
       og = cv.warpPerspective(og,M,(640,480))
       frame = og.copy()
@@ -108,40 +110,31 @@ def gen_proc_vid():
       og=cv.cvtColor(og,cv.COLOR_BGR2GRAY)
       og=cv.GaussianBlur(og,(17,17),7)
       og=cv.dilate(og,dil,iterations=3)
-      #og=cv.adaptiveThreshold(og,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,3,-5)
-      #og= cv.Canny(og,150,200)
-      lines = cv.HoughLines(og,1,np.pi/180,50,None,0,0)
-      #print(len(lines))
+      og=cv.adaptiveThreshold(og,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,7,0)
+#      og=cv.GaussianBlur(og,(13,13),7)
+      og= cv.Canny(og,950,980)
+      lines = cv.HoughLines(og,7,np.pi/180,250)
       Test=True
       if lines is None or Test:
-             yield (showimg(frame))
+             yield (showimg(og))
              continue
+      print("num of lines:"+str(len(lines)))
       og=frame
       parallel=[]
       thresh=20
-      athresh=10
+      athresh=3
       for i in lines:
            rho,theta = i[0]
+           if (theta >175*np.pi/180 and theta<185*np.pi/180) or ((theta<5*np.pi/180 and theta>0) or (theta>355*np.pi/180 and theta<360*np.pi/180)):
+               continue
            for  l in lines:
-               '''
-               if l[0][1]-np.pi/180<(10*np.pi/180):
-                   a = np.cos(l[0][1])
-                   b = np.sin(l[0][1])
-                   x0 = a*l[0][0]
-                   y0 = b*l[0][0]
-                   x1 = int(x0 + 1000*(-b))
-                   y1 = int(y0 + 1000*(a))
-                   x2 = int(x0 - 1000*(-b))
-                   y2 = int(y0 - 1000*(a))
-                   cv.line(og,(x1,y1),(x2,y2),(255,255,0),5)
-               el'''
                if (l[0][0]-rho>thresh) and l[0][1]-theta<(athresh*np.pi/180):
                    parallel.append([(rho,l[0][0]),theta])
       rho=0
       rhol=0
       rhor=0
       theta=0
-      #cv.line(og,(0,0),(640,480),(255,0,0),7)
+     # cv.line(og,(0,0),(640,480),(255,0,0),7)
       if len(parallel)!=0:
           for par in parallel:
               rho1,rho2 = par[0]
