@@ -1,33 +1,13 @@
-import cv2
-import gpiozero
-import pi_client
-import pickle
-
-# test value
-steering_val = 60
-
-def load_all_values(filename):
-    """Reads all pickled objects from a file."""
-    filename = command.txt
-    with open(filename, "rb") as f:
-        while True:
-            try:
-                yield pickle.load(f)
-    print(f"Loading objects from '{filename}':")
-    for obj in load_pickled_objects(filename):
-        print(f"Loaded object: {obj}")
-        steering_val = obj
-
 def set_motor_speeds(steering_val, base_speed=100):
 
     left_speed = base_speed + steering_val
     right_speed = base_speed - steering_val
-        
-    left_speed = max(0, min(255, left_speed))
-    right_speed = max(0, min(255, right_speed))
-    
-    print(f"L: {left_speed}, R: {right_speed}")
-    MotorRun(self, 0, foward, left_speed)
-    MotorRun(self, 1, foward, right_speed)
 
-set_motor_speeds(steering_val)    
+    left_speed = int(max(0, min(255, left_speed)))
+    right_speed = int(max(0, min(255, right_speed)))
+
+    print(f"L: {left_speed}, R: {right_speed}")
+    MotorRun(0, forward, left_speed)
+    MotorRun(1, forward, right_speed)
+
+set_motor_speeds(steering_val)
