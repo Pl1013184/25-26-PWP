@@ -20,7 +20,25 @@ videio.set(cv.CAP_PROP_FRAME_HEIGHT,480)
 #videio.set(cv.CAP_PROP_FPS,30)
 #while videio.read()[0]==False:
 #   pass
+import pickle as pckl
 print("Frames Per Second",videio.get(cv.CAP_PROP_FPS))
+def automation():
+	while True:
+		f=open('command.txt','rb')
+		theta=pckl.load(f)[-1]
+		if theta >-265:
+			pi_client.execute_command('right')
+			time.sleep(0.5)
+		elif theta<-275:
+			pi_client.execute_command('left')
+			time.sleep(0.5)
+		else:
+			pi_client.execute_command('forward')
+			time.sleep(0.5)
+auto=Thread(target=gen_frm,daemon=True)
+@app.route('/start')
+def start():
+	auto.start()
 def gen_frm():
     global bholdr
     i=0
