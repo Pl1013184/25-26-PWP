@@ -1,6 +1,6 @@
 import ALL_Files
 
-def motor_turn():
+def motor_turn(turn_angle:int):
 	pass
         #Create function with testing.
 def main(angle:degrees):
